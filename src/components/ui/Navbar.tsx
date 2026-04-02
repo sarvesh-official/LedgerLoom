@@ -86,7 +86,7 @@ const NavbarContent = () => {
 
   return (
     <>
-      <div className="w-full px-3 py-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] flex justify-between items-center rounded-full transition-colors duration-200 gap-3">
+      <div className="relative z-50 w-full px-3 py-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] flex justify-between items-center rounded-full transition-colors duration-200 gap-3">
         <div className="flex items-center gap-2 shrink-0">
           <button
             className="md:hidden flex items-center justify-center w-8 h-8 cursor-pointer"
@@ -181,7 +181,7 @@ const NavbarContent = () => {
         </div>
       </div>
 
-      <div className="md:hidden mt-2">
+      <div className="md:hidden mt-2 relative z-40">
         <form onSubmit={submitSearch} className="flex items-center gap-2">
           <Input
             value={searchValue}

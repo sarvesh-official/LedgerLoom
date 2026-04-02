@@ -28,7 +28,7 @@ export default function RootLayout({
       >
         <SidebarLayout>
           <Navbar />
-          <div className="flex flex-1 overflow-hidden pt-3">
+          <div className="flex flex-1 overflow-hidden pt-3 relative z-10">
             <Sidebar />
             <main className="flex-1 overflow-y-auto sm:pl-3 text-[var(--text)]">
               {children}
