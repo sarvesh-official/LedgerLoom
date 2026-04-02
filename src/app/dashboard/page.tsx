@@ -20,13 +20,6 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { mockTransactions } from "@/mocks/transactions";
 
 type Role = "viewer" | "admin";
@@ -464,6 +457,8 @@ const Dashboard = () => {
 
   const isAdmin = state.role === "admin";
   const submitLabel = editingId ? "Update Transaction" : "Add Transaction";
+  const selectBaseClass =
+    "h-10 w-full appearance-none rounded-xl border border-[var(--border)] bg-[var(--surface)] pl-3 pr-9 text-sm text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer";
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -605,20 +600,21 @@ const Dashboard = () => {
                 Income vs expense trend over time.
               </p>
             </div>
-            <Select
-              value={cashflowRange}
-              onValueChange={(value) => setCashflowRange(value as "3m" | "6m" | "12m" | "all")}
-            >
-              <SelectTrigger className="w-[150px] h-9 rounded-lg">
-                <SelectValue placeholder="Last 6 months" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3m">Last 3 months</SelectItem>
-                <SelectItem value="6m">Last 6 months</SelectItem>
-                <SelectItem value="12m">Last 12 months</SelectItem>
-                <SelectItem value="all">All data</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative w-[150px]">
+              <select
+                value={cashflowRange}
+                onChange={(event) =>
+                  setCashflowRange(event.target.value as "3m" | "6m" | "12m" | "all")
+                }
+                className="h-9 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-3 pr-9 text-sm text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
+              >
+                <option value="3m">Last 3 months</option>
+                <option value="6m">Last 6 months</option>
+                <option value="12m">Last 12 months</option>
+                <option value="all">All data</option>
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            </div>
           </div>
           <div className="px-3 sm:px-6 py-5 h-[300px]">
             {!mounted || monthlyData.length === 0 ? (
@@ -699,18 +695,20 @@ const Dashboard = () => {
                 Highlight expense distribution by month.
               </p>
             </div>
-            <Select value={activePieMonth} onValueChange={setActivePieMonth}>
-              <SelectTrigger className="w-[130px] h-8 rounded-lg">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
+            <div className="relative w-[130px]">
+              <select
+                value={activePieMonth}
+                onChange={(event) => setActivePieMonth(event.target.value)}
+                className="h-8 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-3 pr-8 text-sm text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
+              >
                 {pieData.map((item) => (
-                  <SelectItem key={item.month} value={item.month}>
+                  <option key={item.month} value={item.month}>
                     {item.label}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            </div>
           </div>
           <div className="h-64 mt-4">
             {!mounted || pieData.length === 0 ? (
@@ -834,57 +832,60 @@ const Dashboard = () => {
               placeholder="Search description/category"
               className="md:col-span-2 rounded-xl"
             />
-            <Select
-              value={state.filters.type}
-              onValueChange={(value) =>
-                dispatch({ type: "SET_FILTER", payload: { type: value as Filters["type"] } })
-              }
-            >
-              <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={state.filters.category}
-              onValueChange={(value) =>
-                dispatch({ type: "SET_FILTER", payload: { category: value } })
-              }
-            >
-              <SelectTrigger className="rounded-xl">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
+            <div className="relative">
+              <select
+                value={state.filters.type}
+                onChange={(event) =>
+                  dispatch({
+                    type: "SET_FILTER",
+                    payload: { type: event.target.value as Filters["type"] },
+                  })
+                }
+                className={selectBaseClass}
+              >
+                <option value="all">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            </div>
+            <div className="relative">
+              <select
+                value={state.filters.category}
+                onChange={(event) =>
+                  dispatch({ type: "SET_FILTER", payload: { category: event.target.value } })
+                }
+                className={selectBaseClass}
+              >
                 {allCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
+                  <option key={category} value={category}>
                     {category === "all" ? "All Categories" : category}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            </div>
           </div>
 
           <div className="flex gap-3 mt-3">
-            <Select
-              value={state.filters.sort}
-              onValueChange={(value) =>
-                dispatch({ type: "SET_FILTER", payload: { sort: value as SortOption } })
-              }
-            >
-              <SelectTrigger className="rounded-xl w-[180px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date_desc">Newest Date</SelectItem>
-                <SelectItem value="date_asc">Oldest Date</SelectItem>
-                <SelectItem value="amount_desc">Highest Amount</SelectItem>
-                <SelectItem value="amount_asc">Lowest Amount</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="relative w-[180px]">
+              <select
+                value={state.filters.sort}
+                onChange={(event) =>
+                  dispatch({
+                    type: "SET_FILTER",
+                    payload: { sort: event.target.value as SortOption },
+                  })
+                }
+                className={selectBaseClass}
+              >
+                <option value="date_desc">Newest Date</option>
+                <option value="date_asc">Oldest Date</option>
+                <option value="amount_desc">Highest Amount</option>
+                <option value="amount_asc">Lowest Amount</option>
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            </div>
             <Button
               type="button"
               variant="outline"
@@ -1017,21 +1018,23 @@ const Dashboard = () => {
             />
 
             <div className="grid grid-cols-2 gap-3">
-              <Select
-                value={form.type}
-                onValueChange={(value) =>
-                  setForm((prev) => ({ ...prev, type: value as TransactionType }))
-                }
-                disabled={!isAdmin}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <select
+                  value={form.type}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      type: event.target.value as TransactionType,
+                    }))
+                  }
+                  disabled={!isAdmin}
+                  className={selectBaseClass}
+                >
+                  <option value="income">Income</option>
+                  <option value="expense">Expense</option>
+                </select>
+                <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              </div>
               <Input
                 type="number"
                 min="1"
