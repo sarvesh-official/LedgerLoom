@@ -72,7 +72,11 @@ const NavbarContent = () => {
   const submitSearch = (event: React.FormEvent) => {
     event.preventDefault();
     const q = searchValue.trim();
-    window.dispatchEvent(new CustomEvent("ledgerloom-search", { detail: q }));
+    window.dispatchEvent(
+      new CustomEvent("ledgerloom-search", {
+        detail: { query: q, scrollToTransactions: true },
+      })
+    );
     router.push(`/dashboard${q ? `?q=${encodeURIComponent(q)}` : ""}`);
   };
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useReducer, useState } from "react";
+import { FormEvent, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -205,6 +206,7 @@ function getMonthlyComparison(transactions: Transaction[]) {
 }
 
 const Dashboard = () => {
+  const transactionsSectionRef = useRef<HTMLElement | null>(null);
   const [state, dispatch] = useReducer(dashboardReducer, {
     role: "viewer",
     transactions: [],
@@ -280,11 +282,23 @@ const Dashboard = () => {
     };
 
     const syncSearchFromEvent = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
+      const customEvent = event as CustomEvent<
+        string | { query?: string; scrollToTransactions?: boolean }
+      >;
+      const detail = customEvent.detail;
+      const query = typeof detail === "string" ? detail : detail?.query ?? "";
       dispatch({
         type: "SET_FILTER",
-        payload: { search: customEvent.detail ?? "" },
+        payload: { search: query },
       });
+      if (typeof detail === "object" && detail?.scrollToTransactions) {
+        setTimeout(() => {
+          transactionsSectionRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 60);
+      }
     };
 
     const originalPushState = window.history.pushState;
@@ -531,17 +545,23 @@ const Dashboard = () => {
             <label className="text-sm text-[var(--muted)]" htmlFor="role-select">
               Role
             </label>
-            <select
-              id="role-select"
-              value={state.role}
-              onChange={(event) =>
-                dispatch({ type: "SET_ROLE", payload: event.target.value as Role })
-              }
-              className="w-[150px] rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
-            >
-              <option value="viewer">Viewer</option>
-              <option value="admin">Admin</option>
-            </select>
+            <div className="relative">
+              <select
+                id="role-select"
+                value={state.role}
+                onChange={(event) =>
+                  dispatch({ type: "SET_ROLE", payload: event.target.value as Role })
+                }
+                className="h-10 w-[164px] appearance-none rounded-full border border-[var(--border)] bg-[var(--surface-soft)] pl-4 pr-10 text-sm font-medium text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
+              >
+                <option value="viewer">Viewer</option>
+                <option value="admin">Admin</option>
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+              />
+            </div>
           </div>
         </div>
 
@@ -729,7 +749,10 @@ const Dashboard = () => {
         </article>
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
+      <section
+        ref={transactionsSectionRef}
+        className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4"
+      >
         <article className="xl:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
           <div className="flex flex-col md:flex-row gap-3 md:items-end md:justify-between">
             <div>
