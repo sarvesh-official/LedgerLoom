@@ -210,6 +210,7 @@ const Dashboard = () => {
   });
 
   const [mounted, setMounted] = useState(false);
+  const [cashflowView, setCashflowView] = useState<"area" | "bar">("area");
   const [cashflowRange, setCashflowRange] = useState<"3m" | "6m" | "12m" | "all">("6m");
   const [activePieMonth, setActivePieMonth] = useState("");
   const [groupByCategory, setGroupByCategory] = useState(false);
@@ -597,23 +598,38 @@ const Dashboard = () => {
                 Interactive Cashflow Area Chart
               </h2>
               <p className="text-sm text-[var(--muted)]">
-                Income vs expense trend over time.
+                Switch between area and bar views for the same cashflow data.
               </p>
             </div>
-            <div className="relative w-[150px]">
-              <select
-                value={cashflowRange}
-                onChange={(event) =>
-                  setCashflowRange(event.target.value as "3m" | "6m" | "12m" | "all")
-                }
-                className="h-9 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-3 pr-9 text-sm text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
-              >
-                <option value="3m">Last 3 months</option>
-                <option value="6m">Last 6 months</option>
-                <option value="12m">Last 12 months</option>
-                <option value="all">All data</option>
-              </select>
-              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+            <div className="flex items-center gap-2">
+              <div className="relative w-[116px]">
+                <select
+                  value={cashflowView}
+                  onChange={(event) =>
+                    setCashflowView(event.target.value as "area" | "bar")
+                  }
+                  className="h-9 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-3 pr-9 text-sm text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
+                >
+                  <option value="area">Area</option>
+                  <option value="bar">Bar</option>
+                </select>
+                <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              </div>
+              <div className="relative w-[150px]">
+                <select
+                  value={cashflowRange}
+                  onChange={(event) =>
+                    setCashflowRange(event.target.value as "3m" | "6m" | "12m" | "all")
+                  }
+                  className="h-9 w-full appearance-none rounded-lg border border-[var(--border)] bg-[var(--surface)] pl-3 pr-9 text-sm text-[var(--text)] shadow-[0_1px_0_var(--ring)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
+                >
+                  <option value="3m">Last 3 months</option>
+                  <option value="6m">Last 6 months</option>
+                  <option value="12m">Last 12 months</option>
+                  <option value="all">All data</option>
+                </select>
+                <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+              </div>
             </div>
           </div>
           <div className="px-3 sm:px-6 py-5 h-[300px]">
@@ -623,63 +639,101 @@ const Dashboard = () => {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={monthlyData}
-                  margin={{ left: 8, right: 8, top: 6, bottom: 6 }}
-                >
-                  <CartesianGrid vertical={false} stroke="var(--border)" />
-                  <XAxis
-                    dataKey="monthLabel"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tick={{ fill: "var(--muted)", fontSize: 11 }}
-                  />
-                  <YAxis
-                    tick={{ fill: "var(--muted)", fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={52}
-                    tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
-                  />
-                  <defs>
-                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--positive)" stopOpacity={0.34} />
-                      <stop offset="95%" stopColor="var(--positive)" stopOpacity={0.05} />
-                    </linearGradient>
-                    <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--negative)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--negative)" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <Tooltip
-                    cursor={false}
-                    contentStyle={{
-                      backgroundColor: "var(--surface)",
-                      border: "1px solid var(--border)",
-                      borderRadius: "12px",
-                      color: "var(--text)",
-                    }}
-                    formatter={(value) => formatCurrency(Number(value ?? 0))}
-                  />
-                  <Area
-                    type="natural"
-                    dataKey="expense"
-                    stroke="var(--negative)"
-                    strokeWidth={2}
-                    fill="url(#expenseFill)"
-                    name="Expense"
-                  />
-                  <Area
-                    type="natural"
-                    dataKey="income"
-                    stroke="var(--positive)"
-                    strokeWidth={2}
-                    fill="url(#incomeFill)"
-                    name="Income"
-                  />
-                  <Legend />
-                </AreaChart>
+                {cashflowView === "area" ? (
+                  <AreaChart
+                    data={monthlyData}
+                    margin={{ left: 8, right: 8, top: 6, bottom: 6 }}
+                  >
+                    <CartesianGrid vertical={false} stroke="var(--border)" />
+                    <XAxis
+                      dataKey="monthLabel"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fill: "var(--muted)", fontSize: 11 }}
+                    />
+                    <YAxis
+                      tick={{ fill: "var(--muted)", fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={52}
+                      tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
+                    />
+                    <defs>
+                      <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--positive)" stopOpacity={0.36} />
+                        <stop offset="95%" stopColor="var(--positive)" stopOpacity={0.05} />
+                      </linearGradient>
+                      <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--negative)" stopOpacity={0.32} />
+                        <stop offset="95%" stopColor="var(--negative)" stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      cursor={false}
+                      contentStyle={{
+                        backgroundColor: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "12px",
+                        color: "var(--text)",
+                      }}
+                      labelFormatter={(label) => `Month: ${label}`}
+                      formatter={(value) => formatCurrency(Number(value ?? 0))}
+                    />
+                    <Area
+                      type="natural"
+                      dataKey="expense"
+                      stroke="var(--negative)"
+                      strokeWidth={2}
+                      fill="url(#expenseFill)"
+                      name="Expense"
+                    />
+                    <Area
+                      type="natural"
+                      dataKey="income"
+                      stroke="var(--positive)"
+                      strokeWidth={2}
+                      fill="url(#incomeFill)"
+                      name="Income"
+                    />
+                    <Legend />
+                  </AreaChart>
+                ) : (
+                  <BarChart
+                    data={monthlyData}
+                    margin={{ left: 8, right: 8, top: 6, bottom: 6 }}
+                  >
+                    <CartesianGrid vertical={false} stroke="var(--border)" />
+                    <XAxis
+                      dataKey="monthLabel"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tick={{ fill: "var(--muted)", fontSize: 11 }}
+                    />
+                    <YAxis
+                      tick={{ fill: "var(--muted)", fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={52}
+                      tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
+                    />
+                    <Tooltip
+                      cursor={false}
+                      contentStyle={{
+                        backgroundColor: "var(--surface)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "12px",
+                        color: "var(--text)",
+                      }}
+                      labelFormatter={(label) => `Month: ${label}`}
+                      formatter={(value) => formatCurrency(Number(value ?? 0))}
+                    />
+                    <Legend />
+                    <Bar dataKey="income" name="Income" fill="var(--positive)" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="expense" name="Expense" fill="var(--negative)" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                )}
               </ResponsiveContainer>
             )}
           </div>
