@@ -2,17 +2,17 @@
 
 import { FormEvent, useEffect, useMemo, useReducer, useState } from "react";
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   Cell,
+  Label,
   Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
-  YAxis,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,6 @@ import { mockTransactions } from "@/mocks/transactions";
 type Role = "viewer" | "admin";
 type TransactionType = "income" | "expense";
 type SortOption = "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
-type TimeRange = "90d" | "30d" | "7d";
 
 type Transaction = {
   id: string;
@@ -108,14 +107,6 @@ function formatDate(dateString: string): string {
   }).format(date);
 }
 
-function formatShortDate(dateString: string): string {
-  const date = new Date(`${dateString}T00:00:00`);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-  }).format(date);
-}
-
 function monthLabelFromKey(monthKey: string): string {
   const date = new Date(`${monthKey}-01T00:00:00`);
   return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" }).format(date);
@@ -131,44 +122,27 @@ function downloadFile(filename: string, content: string, mimeType: string) {
   URL.revokeObjectURL(url);
 }
 
-function getDailyTrendData(transactions: Transaction[], range: TimeRange) {
-  const rangeDays = range === "90d" ? 90 : range === "30d" ? 30 : 7;
-
-  const latest = transactions.reduce((max, tx) => {
-    const currentDate = new Date(`${tx.date}T00:00:00`);
-    return currentDate > max ? currentDate : max;
-  }, new Date());
-
-  const start = new Date(latest);
-  start.setDate(start.getDate() - (rangeDays - 1));
-
-  const byDate = new Map<string, { income: number; expense: number }>();
+function getMonthlySeries(transactions: Transaction[]) {
+  const byMonth = new Map<string, { income: number; expense: number }>();
   for (const tx of transactions) {
-    const row = byDate.get(tx.date) ?? { income: 0, expense: 0 };
+    const monthKey = tx.date.slice(0, 7);
+    const row = byMonth.get(monthKey) ?? { income: 0, expense: 0 };
     if (tx.type === "income") {
       row.income += tx.amount;
     } else {
       row.expense += tx.amount;
     }
-    byDate.set(tx.date, row);
+    byMonth.set(monthKey, row);
   }
 
-  const result: Array<{ date: string; income: number; expense: number; net: number }> = [];
-  const cursor = new Date(start);
-
-  while (cursor <= latest) {
-    const key = cursor.toISOString().slice(0, 10);
-    const row = byDate.get(key) ?? { income: 0, expense: 0 };
-    result.push({
-      date: key,
+  return [...byMonth.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([monthKey, row]) => ({
+      monthKey,
+      monthLabel: monthLabelFromKey(monthKey),
       income: row.income,
       expense: row.expense,
-      net: row.income - row.expense,
-    });
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  return result;
+    }));
 }
 
 function getSpendingBreakdown(transactions: Transaction[]) {
@@ -238,7 +212,10 @@ const Dashboard = () => {
   });
 
   const [mounted, setMounted] = useState(false);
-  const [timeRange, setTimeRange] = useState<TimeRange>("90d");
+  const [activeBarMetric, setActiveBarMetric] = useState<"income" | "expense">(
+    "income"
+  );
+  const [activePieMonth, setActivePieMonth] = useState("");
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -370,10 +347,39 @@ const Dashboard = () => {
     };
   }, [state.transactions]);
 
-  const trendData = useMemo(
-    () => getDailyTrendData(state.transactions, timeRange),
-    [state.transactions, timeRange]
+  const monthlyData = useMemo(
+    () => getMonthlySeries(state.transactions).slice(-6),
+    [state.transactions]
   );
+  const pieData = useMemo(
+    () =>
+      monthlyData
+        .slice(-5)
+        .map((row, index) => ({
+          month: row.monthKey,
+          label: row.monthLabel,
+          value: row.expense,
+          fill: ["#4f7cff", "#20c997", "#f59f00", "#d6336c", "#845ef7"][index % 5],
+        })),
+    [monthlyData]
+  );
+  const barTotals = useMemo(
+    () => ({
+      income: monthlyData.reduce((acc, curr) => acc + curr.income, 0),
+      expense: monthlyData.reduce((acc, curr) => acc + curr.expense, 0),
+    }),
+    [monthlyData]
+  );
+
+  useEffect(() => {
+    if (pieData.length === 0) {
+      setActivePieMonth("");
+      return;
+    }
+    if (!pieData.some((item) => item.month === activePieMonth)) {
+      setActivePieMonth(pieData[0].month);
+    }
+  }, [pieData, activePieMonth]);
 
   const spendingData = useMemo(() => getSpendingBreakdown(state.transactions), [state.transactions]);
   const groupedTransactions = useMemo(() => {
@@ -481,6 +487,11 @@ const Dashboard = () => {
     downloadFile(`${baseName}.csv`, csv, "text/csv;charset=utf-8;");
   };
 
+  const activePieItem = useMemo(
+    () => pieData.find((item) => item.month === activePieMonth),
+    [pieData, activePieMonth]
+  );
+
   return (
     <div className="h-full overflow-y-auto scrollbar-hidden pb-4">
       <section className="rounded-3xl p-6 sm:p-8 border border-[var(--border)] bg-[linear-gradient(120deg,var(--surface)_0%,var(--surface-soft)_100%)] shadow-[0_20px_60px_var(--ring)]">
@@ -529,56 +540,54 @@ const Dashboard = () => {
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
-        <article className="lg:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border)] pb-4">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Interactive Cashflow Area Chart</h2>
-              <p className="text-sm text-[var(--muted)]">Income vs expense for selected range.</p>
+        <article className="lg:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-0 overflow-hidden">
+          <div className="flex flex-col sm:flex-row border-b border-[var(--border)]">
+            <div className="flex-1 px-6 py-4">
+              <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">
+                Interactive Cashflow Bar Chart
+              </h2>
+              <p className="text-sm text-[var(--muted)]">
+                Toggle between income and expense totals for recent months.
+              </p>
             </div>
-            <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
-              <SelectTrigger className="w-[160px] rounded-lg">
-                <SelectValue placeholder="Select range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="30d">Last 30 days</SelectItem>
-                <SelectItem value="7d">Last 7 days</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex">
+              {[
+                { key: "income" as const, label: "Income", color: "text-[var(--positive)]" },
+                { key: "expense" as const, label: "Expense", color: "text-[var(--negative)]" },
+              ].map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  data-active={activeBarMetric === item.key}
+                  className="flex min-w-[130px] flex-col gap-1 justify-center px-5 py-4 border-l border-[var(--border)] data-[active=true]:bg-[var(--surface-soft)] cursor-pointer"
+                  onClick={() => setActiveBarMetric(item.key)}
+                >
+                  <span className="text-xs text-[var(--muted)]">{item.label}</span>
+                  <span className={`text-xl font-semibold ${item.color}`}>
+                    {formatCurrency(barTotals[item.key])}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="pt-4 h-[280px]">
-            {!mounted ? (
+          <div className="px-3 sm:px-6 py-5 h-[300px]">
+            {!mounted || monthlyData.length === 0 ? (
               <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
                 Loading chart...
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trendData}>
-                  <defs>
-                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--positive)" stopOpacity={0.42} />
-                      <stop offset="95%" stopColor="var(--positive)" stopOpacity={0.08} />
-                    </linearGradient>
-                    <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--negative)" stopOpacity={0.38} />
-                      <stop offset="95%" stopColor="var(--negative)" stopOpacity={0.08} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                <BarChart
+                  data={monthlyData}
+                  margin={{ left: 8, right: 8, top: 6, bottom: 6 }}
+                >
+                  <CartesianGrid vertical={false} stroke="var(--border)" />
                   <XAxis
-                    dataKey="date"
+                    dataKey="monthLabel"
                     tickLine={false}
                     axisLine={false}
                     tickMargin={8}
-                    minTickGap={24}
                     tick={{ fill: "var(--muted)", fontSize: 11 }}
-                    tickFormatter={(value: string) => formatShortDate(value)}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "var(--muted)", fontSize: 11 }}
-                    tickFormatter={(value) => `$${value}`}
                   />
                   <Tooltip
                     cursor={false}
@@ -588,48 +597,56 @@ const Dashboard = () => {
                       borderRadius: "12px",
                       color: "var(--text)",
                     }}
-                    labelFormatter={(value) =>
-                      typeof value === "string" ? formatDate(value) : String(value)
-                    }
                     formatter={(value) => formatCurrency(Number(value ?? 0))}
                   />
-                  <Legend />
-                  <Area dataKey="expense" type="natural" stroke="var(--negative)" fill="url(#expenseFill)" strokeWidth={2} />
-                  <Area dataKey="income" type="natural" stroke="var(--positive)" fill="url(#incomeFill)" strokeWidth={2} />
-                </AreaChart>
+                  <Bar
+                    dataKey={activeBarMetric}
+                    radius={[8, 8, 0, 0]}
+                    fill={
+                      activeBarMetric === "income"
+                        ? "var(--positive)"
+                        : "var(--negative)"
+                    }
+                  />
+                </BarChart>
               </ResponsiveContainer>
             )}
           </div>
         </article>
 
         <article className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Spending Breakdown</h2>
-          <p className="text-sm text-[var(--muted)] mt-1">Category distribution for expenses.</p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">
+                Interactive Expense Pie
+              </h2>
+              <p className="text-sm text-[var(--muted)] mt-1">
+                Highlight expense distribution by month.
+              </p>
+            </div>
+            <Select value={activePieMonth} onValueChange={setActivePieMonth}>
+              <SelectTrigger className="w-[130px] h-8 rounded-lg">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {pieData.map((item) => (
+                  <SelectItem key={item.month} value={item.month}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="h-64 mt-4">
-            {!mounted ? (
-              <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
-                Loading chart...
-              </div>
-            ) : spendingData.length === 0 ? (
+            {!mounted || pieData.length === 0 ? (
               <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
                 Add expense transactions to view chart.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={spendingData}
-                    dataKey="value"
-                    nameKey="name"
-                    innerRadius={56}
-                    outerRadius={96}
-                    paddingAngle={2}
-                  >
-                    {spendingData.map((entry, index) => (
-                      <Cell key={entry.name} fill={["#4f7cff", "#20c997", "#f59f00", "#d6336c", "#845ef7"][index % 5]} />
-                    ))}
-                  </Pie>
                   <Tooltip
+                    cursor={false}
                     contentStyle={{
                       backgroundColor: "var(--surface)",
                       border: "1px solid var(--border)",
@@ -638,15 +655,55 @@ const Dashboard = () => {
                     }}
                     formatter={(value) => formatCurrency(Number(value ?? 0))}
                   />
+                  <Pie
+                    data={pieData}
+                    dataKey="value"
+                    nameKey="label"
+                    innerRadius={56}
+                    outerRadius={(entry) =>
+                      entry.month === activePieMonth ? 98 : 88
+                    }
+                    strokeWidth={4}
+                  >
+                    {pieData.map((entry) => (
+                      <Cell key={entry.month} fill={entry.fill} />
+                    ))}
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox && activePieItem) {
+                          return (
+                            <text
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                            >
+                              <tspan
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                className="fill-[var(--text)] text-lg font-bold"
+                              >
+                                {formatCurrency(activePieItem.value)}
+                              </tspan>
+                              <tspan
+                                x={viewBox.cx}
+                                y={(viewBox.cy || 0) + 20}
+                                className="fill-[var(--muted)] text-xs"
+                              >
+                                {activePieItem.label}
+                              </tspan>
+                            </text>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </Pie>
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             )}
           </div>
-          {spendingData.length > 0 && (
-            <p className="text-xs text-[var(--muted)] mt-2">
-              Top category: <span className="text-[var(--text)] font-semibold">{highestSpending.name}</span> ({formatCurrency(highestSpending.value)})
-            </p>
-          )}
         </article>
       </section>
 
