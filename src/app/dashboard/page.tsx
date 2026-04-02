@@ -3,6 +3,8 @@
 import { FormEvent, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -14,6 +16,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   XAxis,
+  YAxis,
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,9 +217,7 @@ const Dashboard = () => {
   });
 
   const [mounted, setMounted] = useState(false);
-  const [activeBarMetric, setActiveBarMetric] = useState<"income" | "expense">(
-    "income"
-  );
+  const [cashflowRange, setCashflowRange] = useState<"3m" | "6m" | "12m" | "all">("6m");
   const [activePieMonth, setActivePieMonth] = useState("");
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -384,10 +385,22 @@ const Dashboard = () => {
     };
   }, [state.transactions]);
 
-  const monthlyData = useMemo(
-    () => getMonthlySeries(state.transactions).slice(-6),
+  const fullMonthlyData = useMemo(
+    () => getMonthlySeries(state.transactions),
     [state.transactions]
   );
+  const monthlyData = useMemo(() => {
+    if (cashflowRange === "all") {
+      return fullMonthlyData;
+    }
+    if (cashflowRange === "12m") {
+      return fullMonthlyData.slice(-12);
+    }
+    if (cashflowRange === "3m") {
+      return fullMonthlyData.slice(-3);
+    }
+    return fullMonthlyData.slice(-6);
+  }, [fullMonthlyData, cashflowRange]);
   const pieData = useMemo(
     () =>
       monthlyData
@@ -583,34 +596,29 @@ const Dashboard = () => {
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         <article className="lg:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-0 overflow-hidden">
-          <div className="flex flex-col sm:flex-row border-b border-[var(--border)]">
-            <div className="flex-1 px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-[var(--border)] px-6 py-4 gap-3">
+            <div>
               <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">
-                Interactive Cashflow Bar Chart
+                Interactive Cashflow Area Chart
               </h2>
               <p className="text-sm text-[var(--muted)]">
-                Toggle between income and expense totals for recent months.
+                Income vs expense trend over time.
               </p>
             </div>
-            <div className="flex">
-              {[
-                { key: "income" as const, label: "Income", color: "text-[var(--positive)]" },
-                { key: "expense" as const, label: "Expense", color: "text-[var(--negative)]" },
-              ].map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  data-active={activeBarMetric === item.key}
-                  className="flex min-w-[130px] flex-col gap-1 justify-center px-5 py-4 border-l border-[var(--border)] data-[active=true]:bg-[var(--surface-soft)] cursor-pointer"
-                  onClick={() => setActiveBarMetric(item.key)}
-                >
-                  <span className="text-xs text-[var(--muted)]">{item.label}</span>
-                  <span className={`text-xl font-semibold ${item.color}`}>
-                    {formatCurrency(barTotals[item.key])}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <Select
+              value={cashflowRange}
+              onValueChange={(value) => setCashflowRange(value as "3m" | "6m" | "12m" | "all")}
+            >
+              <SelectTrigger className="w-[150px] h-9 rounded-lg">
+                <SelectValue placeholder="Last 6 months" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="3m">Last 3 months</SelectItem>
+                <SelectItem value="6m">Last 6 months</SelectItem>
+                <SelectItem value="12m">Last 12 months</SelectItem>
+                <SelectItem value="all">All data</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="px-3 sm:px-6 py-5 h-[300px]">
             {!mounted || monthlyData.length === 0 ? (
@@ -619,7 +627,7 @@ const Dashboard = () => {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
+                <AreaChart
                   data={monthlyData}
                   margin={{ left: 8, right: 8, top: 6, bottom: 6 }}
                 >
@@ -631,6 +639,23 @@ const Dashboard = () => {
                     tickMargin={8}
                     tick={{ fill: "var(--muted)", fontSize: 11 }}
                   />
+                  <YAxis
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={52}
+                    tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
+                  />
+                  <defs>
+                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--positive)" stopOpacity={0.34} />
+                      <stop offset="95%" stopColor="var(--positive)" stopOpacity={0.05} />
+                    </linearGradient>
+                    <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--negative)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--negative)" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
                   <Tooltip
                     cursor={false}
                     contentStyle={{
@@ -641,16 +666,24 @@ const Dashboard = () => {
                     }}
                     formatter={(value) => formatCurrency(Number(value ?? 0))}
                   />
-                  <Bar
-                    dataKey={activeBarMetric}
-                    radius={[8, 8, 0, 0]}
-                    fill={
-                      activeBarMetric === "income"
-                        ? "var(--positive)"
-                        : "var(--negative)"
-                    }
+                  <Area
+                    type="natural"
+                    dataKey="expense"
+                    stroke="var(--negative)"
+                    strokeWidth={2}
+                    fill="url(#expenseFill)"
+                    name="Expense"
                   />
-                </BarChart>
+                  <Area
+                    type="natural"
+                    dataKey="income"
+                    stroke="var(--positive)"
+                    strokeWidth={2}
+                    fill="url(#incomeFill)"
+                    name="Income"
+                  />
+                  <Legend />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
@@ -1047,6 +1080,60 @@ const Dashboard = () => {
             Savings rate: <span className="text-[var(--text)] font-medium">{savingsRate.toFixed(1)}%</span>
           </div>
         </div>
+        <article className="mt-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--text)]">Monthly Comparison Bar Chart</h3>
+              <p className="text-xs text-[var(--muted)]">
+                Side-by-side income and expense totals for the selected range.
+              </p>
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-[var(--positive)] font-medium">Income: {formatCurrency(barTotals.income)}</span>
+              <span className="text-[var(--negative)] font-medium">Expense: {formatCurrency(barTotals.expense)}</span>
+            </div>
+          </div>
+          <div className="h-64">
+            {!mounted || monthlyData.length === 0 ? (
+              <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
+                Add transactions to populate comparison bars.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} margin={{ left: 8, right: 8, top: 6, bottom: 6 }}>
+                  <CartesianGrid vertical={false} stroke="var(--border)" />
+                  <XAxis
+                    dataKey="monthLabel"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                  />
+                  <YAxis
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={52}
+                    tickFormatter={(value) => `$${Number(value).toLocaleString()}`}
+                  />
+                  <Tooltip
+                    cursor={false}
+                    contentStyle={{
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "12px",
+                      color: "var(--text)",
+                    }}
+                    formatter={(value) => formatCurrency(Number(value ?? 0))}
+                  />
+                  <Legend />
+                  <Bar dataKey="income" name="Income" fill="var(--positive)" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="expense" name="Expense" fill="var(--negative)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </article>
       </section>
     </div>
   );
