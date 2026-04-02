@@ -4,7 +4,7 @@ import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { IconX } from "@tabler/icons-react";
 import { useSidebar } from "./ui/SidebarLayout";
-import Sidebar from "./Sidebar";
+import { SidebarContent } from "./Sidebar";
 
 const MobileSidebar = () => {
   const { open, setOpen } = useSidebar();
@@ -26,7 +26,7 @@ const MobileSidebar = () => {
             >
               <IconX />
             </div>
-            <Sidebar />
+            <SidebarContent className="mt-8" />
           </motion.div>
         )}
       </AnimatePresence>
