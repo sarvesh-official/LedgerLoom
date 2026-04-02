@@ -3,12 +3,17 @@
 import Navbar from "@/components/ui/Navbar";
 import { SidebarLayout } from "@/components/ui/SidebarLayout";
 import Sidebar from "@/components/Sidebar";
-import { Space_Grotesk } from "next/font/google";
+import { Space_Grotesk, Sora } from "next/font/google";
 import "./globals.css";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-space-grotesk",
+});
+
+const sora = Sora({
+  subsets: ["latin"],
+  variable: "--font-sora",
 });
 
 export default function RootLayout({
@@ -19,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${spaceGrotesk.variable} font-[var(--font-space-grotesk)] h-screen overflow-hidden flex flex-col p-3 transition-colors duration-200`}
+        className={`${spaceGrotesk.variable} ${sora.variable} font-[var(--font-space-grotesk)] h-screen overflow-hidden flex flex-col p-3 transition-colors duration-200`}
       >
         <SidebarLayout>
           <Navbar />

@@ -293,6 +293,27 @@ const Dashboard = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
   }, [mounted, state.transactions]);
 
+  useEffect(() => {
+    const syncSearchFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q") ?? "";
+      dispatch({ type: "SET_FILTER", payload: { search: q } });
+    };
+
+    const syncSearchFromEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      dispatch({ type: "SET_FILTER", payload: { search: customEvent.detail ?? "" } });
+    };
+
+    syncSearchFromUrl();
+    window.addEventListener("popstate", syncSearchFromUrl);
+    window.addEventListener("ledgerloom-search", syncSearchFromEvent as EventListener);
+    return () => {
+      window.removeEventListener("popstate", syncSearchFromUrl);
+      window.removeEventListener("ledgerloom-search", syncSearchFromEvent as EventListener);
+    };
+  }, []);
+
   const allCategories = useMemo(() => {
     const categories = new Set(state.transactions.map((tx) => tx.category));
     return ["all", ...Array.from(categories).sort()];
@@ -466,7 +487,7 @@ const Dashboard = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">Finance Dashboard</p>
-            <h1 className="text-3xl sm:text-4xl font-semibold text-[var(--text)] mt-1">LedgerLoom Command Center</h1>
+            <h1 className="text-3xl sm:text-4xl font-semibold text-[var(--text)] mt-1 font-[var(--font-sora)]">LedgerLoom Command Center</h1>
             <p className="text-sm text-[var(--muted)] mt-2">
               Interactive analytics, role-based controls, and clean transaction management.
             </p>
@@ -511,7 +532,7 @@ const Dashboard = () => {
         <article className="lg:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border)] pb-4">
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text)]">Interactive Cashflow Area Chart</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Interactive Cashflow Area Chart</h2>
               <p className="text-sm text-[var(--muted)]">Income vs expense for selected range.</p>
             </div>
             <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
@@ -582,7 +603,7 @@ const Dashboard = () => {
         </article>
 
         <article className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Spending Breakdown</h2>
+          <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Spending Breakdown</h2>
           <p className="text-sm text-[var(--muted)] mt-1">Category distribution for expenses.</p>
           <div className="h-64 mt-4">
             {!mounted ? (
@@ -633,7 +654,7 @@ const Dashboard = () => {
         <article className="xl:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
           <div className="flex flex-col md:flex-row gap-3 md:items-end md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-[var(--text)]">Transactions</h2>
+              <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Transactions</h2>
               <p className="text-sm text-[var(--muted)] mt-1">Search, filter, sort, and edit records.</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -830,7 +851,7 @@ const Dashboard = () => {
         </article>
 
         <article className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Admin Transaction Form</h2>
+          <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Admin Transaction Form</h2>
           <p className="text-sm text-[var(--muted)] mt-1">
             {isAdmin ? "Add or edit transactions from here." : "Switch to Admin role to edit data."}
           </p>
@@ -900,7 +921,7 @@ const Dashboard = () => {
       </section>
 
       <section className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5 mt-4">
-        <h2 className="text-lg font-semibold text-[var(--text)]">Insights</h2>
+        <h2 className="text-lg font-semibold text-[var(--text)] font-[var(--font-sora)]">Insights</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
           <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 text-[var(--muted)]">
             Highest spending category:{" "}
