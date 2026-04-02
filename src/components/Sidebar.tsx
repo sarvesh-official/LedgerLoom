@@ -14,6 +14,7 @@ const Sidebar = () => {
               icon: <IconHome size={20} />,
               label: "Dashboard",
             }}
+            className="text-[var(--brand)]"
           />
           <SidebarLink
             link={{

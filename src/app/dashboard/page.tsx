@@ -2,11 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useReducer, useState } from "react";
 import {
+  Area,
+  AreaChart,
   CartesianGrid,
   Cell,
   Legend,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -18,6 +18,7 @@ import {
 type Role = "viewer" | "admin";
 type TransactionType = "income" | "expense";
 type SortOption = "date_desc" | "date_asc" | "amount_desc" | "amount_asc";
+type TimeRange = "90d" | "30d" | "7d";
 
 type Transaction = {
   id: string;
@@ -52,86 +53,16 @@ type DashboardAction =
 const STORAGE_KEY = "ledgerloom-dashboard-transactions";
 
 const INITIAL_TRANSACTIONS: Transaction[] = [
-  {
-    id: "tx-1",
-    date: "2026-04-01",
-    description: "Salary",
-    category: "Income",
-    type: "income",
-    amount: 3500,
-  },
-  {
-    id: "tx-2",
-    date: "2026-03-30",
-    description: "Freelance Payment",
-    category: "Side Income",
-    type: "income",
-    amount: 820,
-  },
-  {
-    id: "tx-3",
-    date: "2026-03-29",
-    description: "Apartment Rent",
-    category: "Housing",
-    type: "expense",
-    amount: 1200,
-  },
-  {
-    id: "tx-4",
-    date: "2026-03-28",
-    description: "Groceries",
-    category: "Food",
-    type: "expense",
-    amount: 185,
-  },
-  {
-    id: "tx-5",
-    date: "2026-03-26",
-    description: "Internet Bill",
-    category: "Utilities",
-    type: "expense",
-    amount: 59,
-  },
-  {
-    id: "tx-6",
-    date: "2026-03-22",
-    description: "Movie Night",
-    category: "Entertainment",
-    type: "expense",
-    amount: 36,
-  },
-  {
-    id: "tx-7",
-    date: "2026-03-20",
-    description: "Metro Card Recharge",
-    category: "Transport",
-    type: "expense",
-    amount: 48,
-  },
-  {
-    id: "tx-8",
-    date: "2026-03-18",
-    description: "Dividend",
-    category: "Investments",
-    type: "income",
-    amount: 240,
-  },
-  {
-    id: "tx-9",
-    date: "2026-03-14",
-    description: "Gym Membership",
-    category: "Health",
-    type: "expense",
-    amount: 60,
-  },
-  {
-    id: "tx-10",
-    date: "2026-02-28",
-    description: "Electricity Bill",
-    category: "Utilities",
-    type: "expense",
-    amount: 104,
-  },
+  { id: "tx-1", date: "2026-04-01", description: "Salary", category: "Income", type: "income", amount: 3500 },
+  { id: "tx-2", date: "2026-03-30", description: "Freelance Payment", category: "Side Income", type: "income", amount: 820 },
+  { id: "tx-3", date: "2026-03-29", description: "Apartment Rent", category: "Housing", type: "expense", amount: 1200 },
+  { id: "tx-4", date: "2026-03-28", description: "Groceries", category: "Food", type: "expense", amount: 185 },
+  { id: "tx-5", date: "2026-03-26", description: "Internet Bill", category: "Utilities", type: "expense", amount: 59 },
+  { id: "tx-6", date: "2026-03-22", description: "Movie Night", category: "Entertainment", type: "expense", amount: 36 },
+  { id: "tx-7", date: "2026-03-20", description: "Metro Card Recharge", category: "Transport", type: "expense", amount: 48 },
+  { id: "tx-8", date: "2026-03-18", description: "Dividend", category: "Investments", type: "income", amount: 240 },
+  { id: "tx-9", date: "2026-03-14", description: "Gym Membership", category: "Health", type: "expense", amount: 60 },
+  { id: "tx-10", date: "2026-02-28", description: "Electricity Bill", category: "Utilities", type: "expense", amount: 104 },
 ];
 
 const DEFAULT_FILTERS: Filters = {
@@ -141,57 +72,26 @@ const DEFAULT_FILTERS: Filters = {
   sort: "date_desc",
 };
 
-function dashboardReducer(
-  state: DashboardState,
-  action: DashboardAction
-): DashboardState {
+function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
   switch (action.type) {
     case "LOAD_TRANSACTIONS":
-      return {
-        ...state,
-        transactions: action.payload,
-      };
+      return { ...state, transactions: action.payload };
     case "SET_ROLE":
-      return {
-        ...state,
-        role: action.payload,
-      };
+      return { ...state, role: action.payload };
     case "SET_FILTER":
-      return {
-        ...state,
-        filters: {
-          ...state.filters,
-          ...action.payload,
-        },
-      };
+      return { ...state, filters: { ...state.filters, ...action.payload } };
     case "RESET_FILTERS":
-      return {
-        ...state,
-        filters: DEFAULT_FILTERS,
-      };
+      return { ...state, filters: DEFAULT_FILTERS };
     case "ADD_TRANSACTION":
-      return {
-        ...state,
-        transactions: [action.payload, ...state.transactions],
-      };
+      return { ...state, transactions: [action.payload, ...state.transactions] };
     case "UPDATE_TRANSACTION":
       return {
         ...state,
-        transactions: state.transactions.map((tx) =>
-          tx.id === action.payload.id ? action.payload : tx
-        ),
+        transactions: state.transactions.map((tx) => (tx.id === action.payload.id ? action.payload : tx)),
       };
     default:
       return state;
   }
-}
-
-function getMonthLabel(dateString: string): string {
-  const date = new Date(`${dateString}T00:00:00`);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    year: "2-digit",
-  }).format(date);
 }
 
 function formatCurrency(amount: number): string {
@@ -211,36 +111,61 @@ function formatDate(dateString: string): string {
   }).format(date);
 }
 
-function getTrendData(transactions: Transaction[]) {
-  const monthlyMap = new Map<string, { income: number; expense: number }>();
+function formatShortDate(dateString: string): string {
+  const date = new Date(`${dateString}T00:00:00`);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
 
+function monthLabelFromKey(monthKey: string): string {
+  const date = new Date(`${monthKey}-01T00:00:00`);
+  return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" }).format(date);
+}
+
+function getDailyTrendData(transactions: Transaction[], range: TimeRange) {
+  const rangeDays = range === "90d" ? 90 : range === "30d" ? 30 : 7;
+
+  const latest = transactions.reduce((max, tx) => {
+    const currentDate = new Date(`${tx.date}T00:00:00`);
+    return currentDate > max ? currentDate : max;
+  }, new Date());
+
+  const start = new Date(latest);
+  start.setDate(start.getDate() - (rangeDays - 1));
+
+  const byDate = new Map<string, { income: number; expense: number }>();
   for (const tx of transactions) {
-    const key = tx.date.slice(0, 7);
-    const existing = monthlyMap.get(key) ?? { income: 0, expense: 0 };
+    const row = byDate.get(tx.date) ?? { income: 0, expense: 0 };
     if (tx.type === "income") {
-      existing.income += tx.amount;
+      row.income += tx.amount;
     } else {
-      existing.expense += tx.amount;
+      row.expense += tx.amount;
     }
-    monthlyMap.set(key, existing);
+    byDate.set(tx.date, row);
   }
 
-  const sortedKeys = [...monthlyMap.keys()].sort();
+  const result: Array<{ date: string; income: number; expense: number; net: number }> = [];
+  const cursor = new Date(start);
 
-  return sortedKeys.map((key) => {
-    const values = monthlyMap.get(key) ?? { income: 0, expense: 0 };
-    return {
-      month: getMonthLabel(`${key}-01`),
-      income: values.income,
-      expense: values.expense,
-      net: values.income - values.expense,
-    };
-  });
+  while (cursor <= latest) {
+    const key = cursor.toISOString().slice(0, 10);
+    const row = byDate.get(key) ?? { income: 0, expense: 0 };
+    result.push({
+      date: key,
+      income: row.income,
+      expense: row.expense,
+      net: row.income - row.expense,
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return result;
 }
 
 function getSpendingBreakdown(transactions: Transaction[]) {
   const categoryMap = new Map<string, number>();
-
   for (const tx of transactions) {
     if (tx.type !== "expense") {
       continue;
@@ -260,7 +185,6 @@ function getMonthlyComparison(transactions: Transaction[]) {
     if (tx.type !== "expense") {
       continue;
     }
-
     const key = tx.date.slice(0, 7);
     monthExpenseMap.set(key, (monthExpenseMap.get(key) ?? 0) + tx.amount);
   }
@@ -306,6 +230,8 @@ const Dashboard = () => {
     filters: DEFAULT_FILTERS,
   });
 
+  const [mounted, setMounted] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>("90d");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: "",
@@ -316,6 +242,7 @@ const Dashboard = () => {
   });
 
   useEffect(() => {
+    setMounted(true);
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
@@ -330,8 +257,11 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (!mounted) {
+      return;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
-  }, [state.transactions]);
+  }, [mounted, state.transactions]);
 
   const allCategories = useMemo(() => {
     const categories = new Set(state.transactions.map((tx) => tx.category));
@@ -347,9 +277,7 @@ const Dashboard = () => {
         tx.description.toLowerCase().includes(searchTerm) ||
         tx.category.toLowerCase().includes(searchTerm);
 
-      const matchesType =
-        state.filters.type === "all" || tx.type === state.filters.type;
-
+      const matchesType = state.filters.type === "all" || tx.type === state.filters.type;
       const matchesCategory =
         state.filters.category === "all" || tx.category === state.filters.category;
 
@@ -391,18 +319,17 @@ const Dashboard = () => {
     };
   }, [state.transactions]);
 
-  const trendData = useMemo(() => getTrendData(state.transactions), [state.transactions]);
-  const spendingData = useMemo(
-    () => getSpendingBreakdown(state.transactions),
-    [state.transactions]
+  const trendData = useMemo(
+    () => getDailyTrendData(state.transactions, timeRange),
+    [state.transactions, timeRange]
   );
 
+  const spendingData = useMemo(() => getSpendingBreakdown(state.transactions), [state.transactions]);
   const highestSpending = spendingData[0];
   const comparison = getMonthlyComparison(state.transactions);
-  const savingsRate = totals.income === 0 ? 0 : ((totals.balance / totals.income) * 100);
+  const savingsRate = totals.income === 0 ? 0 : (totals.balance / totals.income) * 100;
 
   const isAdmin = state.role === "admin";
-
   const submitLabel = editingId ? "Update Transaction" : "Add Transaction";
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -431,18 +358,9 @@ const Dashboard = () => {
       amount,
     };
 
-    dispatch({
-      type: editingId ? "UPDATE_TRANSACTION" : "ADD_TRANSACTION",
-      payload,
-    });
+    dispatch({ type: editingId ? "UPDATE_TRANSACTION" : "ADD_TRANSACTION", payload });
 
-    setForm({
-      date: "",
-      description: "",
-      category: "",
-      type: "expense",
-      amount: "",
-    });
+    setForm({ date: "", description: "", category: "", type: "expense", amount: "" });
     setEditingId(null);
   };
 
@@ -450,7 +368,6 @@ const Dashboard = () => {
     if (!isAdmin) {
       return;
     }
-
     setEditingId(tx.id);
     setForm({
       date: tx.date,
@@ -463,29 +380,23 @@ const Dashboard = () => {
 
   return (
     <div className="h-full overflow-y-auto scrollbar-hidden pb-4">
-      <section className="rounded-3xl p-5 sm:p-7 bg-[radial-gradient(circle_at_top_right,#21325b_0%,#101726_45%,#0a0f19_100%)] border border-[#273350] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+      <section className="rounded-3xl p-6 sm:p-8 border border-[var(--border)] bg-[linear-gradient(120deg,var(--surface)_0%,var(--surface-soft)_100%)] shadow-[0_20px_60px_var(--ring)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs tracking-[0.24em] text-[#8da5d6] uppercase">Finance Dashboard</p>
-            <h1 className="text-2xl sm:text-3xl font-semibold text-white mt-1">
-              Personal Finance Command Center
-            </h1>
-            <p className="text-sm text-[#b4c2e3] mt-2">
-              Track cashflow, monitor spending patterns, and manage transactions with role-based controls.
+            <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">Finance Dashboard</p>
+            <h1 className="text-3xl sm:text-4xl font-semibold text-[var(--text)] mt-1">LedgerLoom Command Center</h1>
+            <p className="text-sm text-[var(--muted)] mt-2">
+              Interactive analytics, role-based controls, and clean transaction management.
             </p>
           </div>
 
           <div className="flex gap-3 items-center">
-            <label className="text-sm text-[#d0dcf7]" htmlFor="role-switcher">
-              Role
-            </label>
+            <label className="text-sm text-[var(--muted)]" htmlFor="role-switcher">Role</label>
             <select
               id="role-switcher"
               value={state.role}
-              onChange={(e) =>
-                dispatch({ type: "SET_ROLE", payload: e.target.value as Role })
-              }
-              className="bg-[#111b2e] border border-[#33466f] rounded-full px-4 py-2 text-sm text-white"
+              onChange={(e) => dispatch({ type: "SET_ROLE", payload: e.target.value as Role })}
+              className="bg-[var(--surface)] border border-[var(--border)] rounded-full px-4 py-2 text-sm text-[var(--text)]"
             >
               <option value="viewer">Viewer</option>
               <option value="admin">Admin</option>
@@ -494,56 +405,105 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-          <div className="rounded-2xl bg-[#141f35] border border-[#2f4268] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#7f96c7]">Total Balance</p>
-            <p className="text-2xl font-semibold text-white mt-2">{formatCurrency(totals.balance)}</p>
+          <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Total Balance</p>
+            <p className="text-2xl font-semibold text-[var(--text)] mt-2">{formatCurrency(totals.balance)}</p>
           </div>
-          <div className="rounded-2xl bg-[#111f1f] border border-[#21544f] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#7fc4bc]">Income</p>
-            <p className="text-2xl font-semibold text-[#7CF3C0] mt-2">{formatCurrency(totals.income)}</p>
+          <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Income</p>
+            <p className="text-2xl font-semibold text-[var(--positive)] mt-2">{formatCurrency(totals.income)}</p>
           </div>
-          <div className="rounded-2xl bg-[#2b1920] border border-[#5b2b3b] p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#d7a2b5]">Expenses</p>
-            <p className="text-2xl font-semibold text-[#ff9bb8] mt-2">{formatCurrency(totals.expenses)}</p>
+          <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Expenses</p>
+            <p className="text-2xl font-semibold text-[var(--negative)] mt-2">{formatCurrency(totals.expenses)}</p>
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
-        <article className="lg:col-span-2 rounded-2xl bg-[#131313] border border-[#2b2b2b] p-4 sm:p-5 min-h-[300px]">
-          <h2 className="text-lg font-semibold text-white">Monthly Cashflow Trend</h2>
-          <p className="text-sm text-neutral-400 mt-1">Time-based view of income and expenses.</p>
-          <div className="h-64 mt-4">
-            {trendData.length === 0 ? (
-              <div className="h-full rounded-xl border border-dashed border-neutral-700 grid place-items-center text-neutral-400 text-sm">
-                No data available yet.
+        <article className="lg:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-[var(--border)] pb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--text)]">Interactive Cashflow Area Chart</h2>
+              <p className="text-sm text-[var(--muted)]">Income vs expense for selected range.</p>
+            </div>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              className="w-[160px] rounded-lg bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+            >
+              <option value="90d">Last 90 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="7d">Last 7 days</option>
+            </select>
+          </div>
+          <div className="pt-4 h-[280px]">
+            {!mounted ? (
+              <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
+                Loading chart...
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2b2b2b" />
-                  <XAxis dataKey="month" stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" tickFormatter={(v) => `$${v}`} />
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--positive)" stopOpacity={0.42} />
+                      <stop offset="95%" stopColor="var(--positive)" stopOpacity={0.08} />
+                    </linearGradient>
+                    <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--negative)" stopOpacity={0.38} />
+                      <stop offset="95%" stopColor="var(--negative)" stopOpacity={0.08} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                  <XAxis
+                    dataKey="date"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    minTickGap={24}
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                    tickFormatter={(value: string) => formatShortDate(value)}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "var(--muted)", fontSize: 11 }}
+                    tickFormatter={(value) => `$${value}`}
+                  />
                   <Tooltip
+                    cursor={false}
+                    contentStyle={{
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "12px",
+                      color: "var(--text)",
+                    }}
+                    labelFormatter={(value) =>
+                      typeof value === "string" ? formatDate(value) : String(value)
+                    }
                     formatter={(value) => formatCurrency(Number(value ?? 0))}
                   />
                   <Legend />
-                  <Line type="monotone" dataKey="income" stroke="#61f2ba" strokeWidth={2} />
-                  <Line type="monotone" dataKey="expense" stroke="#ff7ea5" strokeWidth={2} />
-                  <Line type="monotone" dataKey="net" stroke="#72a2ff" strokeWidth={2} />
-                </LineChart>
+                  <Area dataKey="expense" type="natural" stroke="var(--negative)" fill="url(#expenseFill)" strokeWidth={2} />
+                  <Area dataKey="income" type="natural" stroke="var(--positive)" fill="url(#incomeFill)" strokeWidth={2} />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
         </article>
 
-        <article className="rounded-2xl bg-[#131313] border border-[#2b2b2b] p-4 sm:p-5 min-h-[300px]">
-          <h2 className="text-lg font-semibold text-white">Spending Breakdown</h2>
-          <p className="text-sm text-neutral-400 mt-1">Categorical view by expense category.</p>
+        <article className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-lg font-semibold text-[var(--text)]">Spending Breakdown</h2>
+          <p className="text-sm text-[var(--muted)] mt-1">Category distribution for expenses.</p>
           <div className="h-64 mt-4">
-            {spendingData.length === 0 ? (
-              <div className="h-full rounded-xl border border-dashed border-neutral-700 grid place-items-center text-neutral-400 text-sm">
-                Add expense transactions to view spending categories.
+            {!mounted ? (
+              <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
+                Loading chart...
+              </div>
+            ) : spendingData.length === 0 ? (
+              <div className="h-full rounded-xl border border-dashed border-[var(--border)] grid place-items-center text-sm text-[var(--muted)]">
+                Add expense transactions to view chart.
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -552,18 +512,21 @@ const Dashboard = () => {
                     data={spendingData}
                     dataKey="value"
                     nameKey="name"
-                    innerRadius={55}
-                    outerRadius={95}
+                    innerRadius={56}
+                    outerRadius={96}
                     paddingAngle={2}
                   >
                     {spendingData.map((entry, index) => (
-                      <Cell
-                        key={entry.name}
-                        fill={["#60a5fa", "#34d399", "#f59e0b", "#f472b6", "#a78bfa"][index % 5]}
-                      />
+                      <Cell key={entry.name} fill={["#4f7cff", "#20c997", "#f59f00", "#d6336c", "#845ef7"][index % 5]} />
                     ))}
                   </Pie>
                   <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "12px",
+                      color: "var(--text)",
+                    }}
                     formatter={(value) => formatCurrency(Number(value ?? 0))}
                   />
                 </PieChart>
@@ -571,32 +534,26 @@ const Dashboard = () => {
             )}
           </div>
           {spendingData.length > 0 && (
-            <div className="text-xs text-neutral-300 mt-2">
-              Top: <span className="text-white font-medium">{spendingData[0].name}</span> ({formatCurrency(spendingData[0].value)})
-            </div>
+            <p className="text-xs text-[var(--muted)] mt-2">
+              Top category: <span className="text-[var(--text)] font-semibold">{highestSpending.name}</span> ({formatCurrency(highestSpending.value)})
+            </p>
           )}
         </article>
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-4">
-        <article className="xl:col-span-2 rounded-2xl bg-[#131313] border border-[#2b2b2b] p-4 sm:p-5">
+        <article className="xl:col-span-2 rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
           <div className="flex flex-col md:flex-row gap-3 md:items-end md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-white">Transactions</h2>
-              <p className="text-sm text-neutral-400 mt-1">Search, filter, and sort your activity.</p>
+              <h2 className="text-lg font-semibold text-[var(--text)]">Transactions</h2>
+              <p className="text-sm text-[var(--muted)] mt-1">Search, filter, sort, and edit records.</p>
             </div>
             <button
               disabled={!isAdmin}
-              className="rounded-full px-4 py-2 text-sm font-medium bg-[#1f345f] border border-[#365998] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-full px-4 py-2 text-sm font-medium bg-[var(--brand)] text-white disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => {
                 setEditingId(null);
-                setForm({
-                  date: "",
-                  description: "",
-                  category: "",
-                  type: "expense",
-                  amount: "",
-                });
+                setForm({ date: "", description: "", category: "", type: "expense", amount: "" });
               }}
             >
               {isAdmin ? "Add New Transaction" : "Viewer mode (read-only)"}
@@ -608,17 +565,12 @@ const Dashboard = () => {
               value={state.filters.search}
               onChange={(e) => dispatch({ type: "SET_FILTER", payload: { search: e.target.value } })}
               placeholder="Search description/category"
-              className="md:col-span-2 rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white"
+              className="md:col-span-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
             />
             <select
               value={state.filters.type}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FILTER",
-                  payload: { type: e.target.value as Filters["type"] },
-                })
-              }
-              className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white"
+              onChange={(e) => dispatch({ type: "SET_FILTER", payload: { type: e.target.value as Filters["type"] } })}
+              className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
             >
               <option value="all">All Types</option>
               <option value="income">Income</option>
@@ -627,7 +579,7 @@ const Dashboard = () => {
             <select
               value={state.filters.category}
               onChange={(e) => dispatch({ type: "SET_FILTER", payload: { category: e.target.value } })}
-              className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white"
+              className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
             >
               {allCategories.map((category) => (
                 <option key={category} value={category}>
@@ -640,13 +592,8 @@ const Dashboard = () => {
           <div className="flex gap-3 mt-3">
             <select
               value={state.filters.sort}
-              onChange={(e) =>
-                dispatch({
-                  type: "SET_FILTER",
-                  payload: { sort: e.target.value as SortOption },
-                })
-              }
-              className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white"
+              onChange={(e) => dispatch({ type: "SET_FILTER", payload: { sort: e.target.value as SortOption } })}
+              className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
             >
               <option value="date_desc">Newest Date</option>
               <option value="date_asc">Oldest Date</option>
@@ -655,7 +602,7 @@ const Dashboard = () => {
             </select>
             <button
               onClick={() => dispatch({ type: "RESET_FILTERS" })}
-              className="rounded-xl border border-[#2b2b2b] px-3 py-2 text-sm text-neutral-300"
+              className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)]"
             >
               Reset Filters
             </button>
@@ -663,13 +610,13 @@ const Dashboard = () => {
 
           <div className="mt-4 overflow-x-auto">
             {filteredTransactions.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-neutral-700 px-4 py-10 text-center text-sm text-neutral-400">
+              <div className="rounded-xl border border-dashed border-[var(--border)] px-4 py-10 text-center text-sm text-[var(--muted)]">
                 No transactions match your filters.
               </div>
             ) : (
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="text-left text-neutral-400 border-b border-neutral-700">
+                  <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
                     <th className="py-3 pr-4">Date</th>
                     <th className="py-3 pr-4">Description</th>
                     <th className="py-3 pr-4">Category</th>
@@ -680,16 +627,12 @@ const Dashboard = () => {
                 </thead>
                 <tbody>
                   {filteredTransactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-neutral-800 text-white">
+                    <tr key={tx.id} className="border-b border-[var(--border)] text-[var(--text)]">
                       <td className="py-3 pr-4 whitespace-nowrap">{formatDate(tx.date)}</td>
                       <td className="py-3 pr-4">{tx.description}</td>
                       <td className="py-3 pr-4">{tx.category}</td>
                       <td className="py-3 pr-4 capitalize">{tx.type}</td>
-                      <td
-                        className={`py-3 pr-4 font-medium ${
-                          tx.type === "income" ? "text-emerald-300" : "text-rose-300"
-                        }`}
-                      >
+                      <td className={`py-3 pr-4 font-medium ${tx.type === "income" ? "text-[var(--positive)]" : "text-[var(--negative)]"}`}>
                         {tx.type === "income" ? "+" : "-"}
                         {formatCurrency(tx.amount)}
                       </td>
@@ -697,7 +640,7 @@ const Dashboard = () => {
                         <button
                           disabled={!isAdmin}
                           onClick={() => onEdit(tx)}
-                          className="text-xs px-3 py-1 rounded-full border border-[#34558f] text-[#aac2f4] disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="text-xs px-3 py-1 rounded-full border border-[var(--border)] text-[var(--brand)] disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           Edit
                         </button>
@@ -710,12 +653,10 @@ const Dashboard = () => {
           </div>
         </article>
 
-        <article className="rounded-2xl bg-[#131313] border border-[#2b2b2b] p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-white">Admin Transaction Form</h2>
-          <p className="text-sm text-neutral-400 mt-1">
-            {isAdmin
-              ? "Add a new transaction or update an existing one."
-              : "Switch to Admin role to add or edit transactions."}
+        <article className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">
+          <h2 className="text-lg font-semibold text-[var(--text)]">Admin Transaction Form</h2>
+          <p className="text-sm text-[var(--muted)] mt-1">
+            {isAdmin ? "Add or edit transactions from here." : "Switch to Admin role to edit data."}
           </p>
 
           <form onSubmit={onSubmit} className="space-y-3 mt-4">
@@ -724,7 +665,7 @@ const Dashboard = () => {
               value={form.date}
               onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white disabled:opacity-50"
+              className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
             />
             <input
               type="text"
@@ -732,7 +673,7 @@ const Dashboard = () => {
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="Description"
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white disabled:opacity-50"
+              className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
             />
             <input
               type="text"
@@ -740,17 +681,15 @@ const Dashboard = () => {
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               placeholder="Category"
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white disabled:opacity-50"
+              className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
             />
 
             <div className="grid grid-cols-2 gap-3">
               <select
                 value={form.type}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, type: e.target.value as TransactionType }))
-                }
+                onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as TransactionType }))}
                 disabled={!isAdmin}
-                className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white disabled:opacity-50"
+                className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
               >
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
@@ -763,14 +702,14 @@ const Dashboard = () => {
                 onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
                 placeholder="Amount"
                 disabled={!isAdmin}
-                className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] px-3 py-2 text-sm text-white disabled:opacity-50"
+                className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
               />
             </div>
 
             <button
               type="submit"
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[#244785] border border-[#3d65a8] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitLabel}
             </button>
@@ -778,34 +717,29 @@ const Dashboard = () => {
         </article>
       </section>
 
-      <section className="rounded-2xl bg-[#131313] border border-[#2b2b2b] p-4 sm:p-5 mt-4">
-        <h2 className="text-lg font-semibold text-white">Insights</h2>
+      <section className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5 mt-4">
+        <h2 className="text-lg font-semibold text-[var(--text)]">Insights</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
-          <div className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] p-3 text-neutral-300">
+          <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 text-[var(--muted)]">
             Highest spending category:{" "}
-            <span className="text-white font-medium">
+            <span className="text-[var(--text)] font-medium">
               {highestSpending
                 ? `${highestSpending.name} (${formatCurrency(highestSpending.value)})`
                 : "Not enough expense data"}
             </span>
           </div>
 
-          <div className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] p-3 text-neutral-300">
+          <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 text-[var(--muted)]">
             Monthly expense comparison:{" "}
-            <span className="text-white font-medium">
+            <span className="text-[var(--text)] font-medium">
               {comparison
-                ? `${comparison.direction === "up" ? "Up" : "Down"} ${comparison.changePct.toFixed(
-                    1
-                  )}% (${getMonthLabel(`${comparison.previousMonth}-01`)} to ${getMonthLabel(
-                    `${comparison.currentMonth}-01`
-                  )})`
+                ? `${comparison.direction === "up" ? "Up" : "Down"} ${comparison.changePct.toFixed(1)}% (${monthLabelFromKey(comparison.previousMonth)} to ${monthLabelFromKey(comparison.currentMonth)})`
                 : "Need at least two months of expenses"}
             </span>
           </div>
 
-          <div className="rounded-xl bg-[#0f0f0f] border border-[#2b2b2b] p-3 text-neutral-300">
-            Savings rate:{" "}
-            <span className="text-white font-medium">{savingsRate.toFixed(1)}%</span>
+          <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 text-[var(--muted)]">
+            Savings rate: <span className="text-[var(--text)] font-medium">{savingsRate.toFixed(1)}%</span>
           </div>
         </div>
       </section>

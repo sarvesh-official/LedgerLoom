@@ -75,11 +75,7 @@ export const SidebarLayout = ({
 };
 
 export const SidebarBody = (props: React.ComponentProps<typeof motion.div>) => {
-  return (
-    <>
-      <DesktopSidebar {...props} />
-    </>
-  );
+  return <DesktopSidebar {...props} />;
 };
 
 export const DesktopSidebar = ({
@@ -87,16 +83,13 @@ export const DesktopSidebar = ({
   children,
   ...props
 }: React.ComponentProps<typeof motion.div>) => {
-  // ❌ Removed open/setOpen logic for hover
   return (
     <motion.div
       className={cn(
-        "h-full px-2 py-4 hidden md:flex md:flex-col items-center justify-between w-[60px] shrink-0 bg-[#1e1e1e] rounded-full",
+        "h-full px-2 py-4 hidden md:flex md:flex-col items-center justify-between w-[60px] shrink-0 bg-[var(--surface)] border border-[var(--border)] rounded-full",
         className
       )}
-      animate={{
-        width: "60px", // Fixed collapsed width
-      }}
+      animate={{ width: "60px" }}
       {...props}
     >
       {children}
@@ -112,14 +105,11 @@ export const SidebarLink = ({
   link: Links;
   className?: string;
 }) => {
-  // You can keep animate logic in case you want it for mobile sidebar
-  // const { open, animate } = useSidebar();
-
   return (
     <a
       href={link.href}
       className={cn(
-        "flex items-center justify-center gap-2 group/sidebar py-2 text-white",
+        "flex items-center justify-center gap-2 group/sidebar py-2 text-[var(--muted)] hover:text-[var(--text)] transition-colors",
         className
       )}
       {...props}
@@ -132,7 +122,7 @@ export const SidebarLink = ({
           display: "none",
           opacity: 0,
         }}
-        className="text-neutral-700 dark:text-neutral-200 text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+        className="text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
       >
         {link.label}
       </motion.span>

@@ -18,10 +18,10 @@ const MobileSidebar = () => {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "-100%", opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="fixed inset-0 bg-[#1e1e1e] z-50 p-6"
+            className="fixed inset-0 bg-[var(--surface)] z-50 p-6"
           >
             <div
-              className="absolute top-6 right-6 text-white cursor-pointer"
+              className="absolute top-6 right-6 text-[var(--text)] cursor-pointer"
               onClick={() => setOpen(false)}
             >
               <IconX />

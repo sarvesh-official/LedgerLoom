@@ -17,15 +17,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
-        className={`${spaceGrotesk.variable} font-[var(--font-space-grotesk)] bg-[#111111] h-screen overflow-hidden flex flex-col p-3`}
+        className={`${spaceGrotesk.variable} font-[var(--font-space-grotesk)] h-screen overflow-hidden flex flex-col p-3 transition-colors duration-200`}
       >
         <SidebarLayout>
           <Navbar />
           <div className="flex flex-1 overflow-hidden pt-3">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto sm:pl-3 text-white">
+            <main className="flex-1 overflow-y-auto sm:pl-3 text-[var(--text)]">
               {children}
             </main>
           </div>
