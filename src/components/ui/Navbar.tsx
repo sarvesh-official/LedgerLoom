@@ -119,10 +119,10 @@ const NavbarContent = () => {
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Search transactions, categories, or notes"
-              className="pl-9"
+              className="pl-9 bg-[var(--surface-soft)] border-[var(--border)]"
             />
           </div>
-          <Button type="submit" size="sm" className="h-10">
+          <Button type="submit" size="sm" variant="outline" className="h-10">
             Search
           </Button>
         </form>
@@ -187,8 +187,9 @@ const NavbarContent = () => {
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search transactions"
+            className="bg-[var(--surface-soft)] border-[var(--border)]"
           />
-          <Button type="submit" size="sm">
+          <Button type="submit" size="sm" variant="outline">
             Go
           </Button>
         </form>
