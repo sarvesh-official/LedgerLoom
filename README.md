@@ -1,4 +1,4 @@
-# SHARKFINCE Finance Dashboard UI
+# LedgerLoom Finance Dashboard UI
 
 A frontend-only finance dashboard built for the Frontend Developer Intern assignment.
 
@@ -7,6 +7,7 @@ A frontend-only finance dashboard built for the Frontend Developer Intern assign
 - React 19 + TypeScript
 - Tailwind CSS
 - Recharts
+- shadcn-style UI primitives (Radix Select + custom Button/Input)
 
 ## How To Run
 1. Install dependencies:
@@ -23,8 +24,8 @@ npm run dev
 
 ### 1. Dashboard Overview
 - Summary cards: `Total Balance`, `Income`, `Expenses`
-- Time-based visualization: `Monthly Cashflow Trend` (income/expense/net)
-- Categorical visualization: `Spending Breakdown` pie chart by category
+- Time-based visualization: interactive area chart with time range (`90d`, `30d`, `7d`)
+- Categorical visualization: spending breakdown pie chart by category
 
 ### 2. Transactions Section
 - Transaction fields displayed: date, description, category, type, amount
@@ -57,16 +58,23 @@ npm run dev
 - Graceful no-data/empty-result states
 
 ## Optional Enhancements Included
+- Dark mode + light mode toggle
 - Local persistence using `localStorage` for transactions
-- Visual polish with gradients, structured card hierarchy, and chart styling
+- Mock API integration (`/api/transactions` route)
+- Export filtered transactions as CSV and JSON
+- Advanced grouping mode for transactions by category
+- Polished chart and control interactions
 
 ## Key Implementation Notes
 - Main implementation lives in:
   - `src/app/dashboard/page.tsx`
-- Shared app shell (sidebar + navbar) remains intact.
-- Added non-default typography (`Space Grotesk`) in:
-  - `src/app/layout.tsx`
+- Mock API route:
+  - `src/app/api/transactions/route.ts`
+- Mock data source:
+  - `src/mocks/transactions.ts`
+- Planning document for assignment walkthrough:
+  - `plan.md`
 
 ## Submission Notes
-- This project is intentionally frontend-only and uses mock/static starter data.
+- This project is intentionally frontend-only and uses mock/static data.
 - No backend or authentication is required for this assignment scenario.

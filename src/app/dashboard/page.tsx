@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { mockTransactions } from "@/mocks/transactions";
 
 type Role = "viewer" | "admin";
 type TransactionType = "income" | "expense";
@@ -60,19 +61,6 @@ type DashboardAction =
   | { type: "UPDATE_TRANSACTION"; payload: Transaction };
 
 const STORAGE_KEY = "ledgerloom-dashboard-transactions";
-
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: "tx-1", date: "2026-04-01", description: "Salary", category: "Income", type: "income", amount: 3500 },
-  { id: "tx-2", date: "2026-03-30", description: "Freelance Payment", category: "Side Income", type: "income", amount: 820 },
-  { id: "tx-3", date: "2026-03-29", description: "Apartment Rent", category: "Housing", type: "expense", amount: 1200 },
-  { id: "tx-4", date: "2026-03-28", description: "Groceries", category: "Food", type: "expense", amount: 185 },
-  { id: "tx-5", date: "2026-03-26", description: "Internet Bill", category: "Utilities", type: "expense", amount: 59 },
-  { id: "tx-6", date: "2026-03-22", description: "Movie Night", category: "Entertainment", type: "expense", amount: 36 },
-  { id: "tx-7", date: "2026-03-20", description: "Metro Card Recharge", category: "Transport", type: "expense", amount: 48 },
-  { id: "tx-8", date: "2026-03-18", description: "Dividend", category: "Investments", type: "income", amount: 240 },
-  { id: "tx-9", date: "2026-03-14", description: "Gym Membership", category: "Health", type: "expense", amount: 60 },
-  { id: "tx-10", date: "2026-02-28", description: "Electricity Bill", category: "Utilities", type: "expense", amount: 104 },
-];
 
 const DEFAULT_FILTERS: Filters = {
   search: "",
@@ -131,6 +119,16 @@ function formatShortDate(dateString: string): string {
 function monthLabelFromKey(monthKey: string): string {
   const date = new Date(`${monthKey}-01T00:00:00`);
   return new Intl.DateTimeFormat("en-US", { month: "short", year: "2-digit" }).format(date);
+}
+
+function downloadFile(filename: string, content: string, mimeType: string) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function getDailyTrendData(transactions: Transaction[], range: TimeRange) {
@@ -235,12 +233,13 @@ function getMonthlyComparison(transactions: Transaction[]) {
 const Dashboard = () => {
   const [state, dispatch] = useReducer(dashboardReducer, {
     role: "viewer",
-    transactions: INITIAL_TRANSACTIONS,
+    transactions: [],
     filters: DEFAULT_FILTERS,
   });
 
   const [mounted, setMounted] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>("90d");
+  const [groupByCategory, setGroupByCategory] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: "",
@@ -252,17 +251,39 @@ const Dashboard = () => {
 
   useEffect(() => {
     setMounted(true);
+    let loadedFromStorage = false;
+
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Transaction[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           dispatch({ type: "LOAD_TRANSACTIONS", payload: parsed });
+          loadedFromStorage = true;
         }
       }
     } catch {
       // Keep initial data if local storage parsing fails.
     }
+
+    if (loadedFromStorage) {
+      return;
+    }
+
+    const loadTransactions = async () => {
+      try {
+        const response = await fetch("/api/transactions", { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Unable to fetch transactions");
+        }
+        const data = (await response.json()) as { transactions: Transaction[] };
+        dispatch({ type: "LOAD_TRANSACTIONS", payload: data.transactions });
+      } catch {
+        dispatch({ type: "LOAD_TRANSACTIONS", payload: mockTransactions as Transaction[] });
+      }
+    };
+
+    void loadTransactions();
   }, []);
 
   useEffect(() => {
@@ -334,6 +355,32 @@ const Dashboard = () => {
   );
 
   const spendingData = useMemo(() => getSpendingBreakdown(state.transactions), [state.transactions]);
+  const groupedTransactions = useMemo(() => {
+    const groups = new Map<
+      string,
+      { category: string; income: number; expense: number; count: number }
+    >();
+
+    for (const tx of filteredTransactions) {
+      const row = groups.get(tx.category) ?? {
+        category: tx.category,
+        income: 0,
+        expense: 0,
+        count: 0,
+      };
+      if (tx.type === "income") {
+        row.income += tx.amount;
+      } else {
+        row.expense += tx.amount;
+      }
+      row.count += 1;
+      groups.set(tx.category, row);
+    }
+
+    return [...groups.values()].sort(
+      (a, b) => b.expense + b.income - (a.expense + a.income)
+    );
+  }, [filteredTransactions]);
   const highestSpending = spendingData[0];
   const comparison = getMonthlyComparison(state.transactions);
   const savingsRate = totals.income === 0 ? 0 : (totals.balance / totals.income) * 100;
@@ -385,6 +432,32 @@ const Dashboard = () => {
       type: tx.type,
       amount: String(tx.amount),
     });
+  };
+
+  const exportTransactions = (format: "csv" | "json") => {
+    const baseName = `ledgerloom-transactions-${new Date().toISOString().slice(0, 10)}`;
+    if (format === "json") {
+      downloadFile(
+        `${baseName}.json`,
+        JSON.stringify(filteredTransactions, null, 2),
+        "application/json"
+      );
+      return;
+    }
+
+    const header = ["id", "date", "description", "category", "type", "amount"];
+    const rows = filteredTransactions.map((tx) =>
+      [
+        tx.id,
+        tx.date,
+        `"${tx.description.replace(/"/g, '""')}"`,
+        `"${tx.category.replace(/"/g, '""')}"`,
+        tx.type,
+        tx.amount.toFixed(2),
+      ].join(",")
+    );
+    const csv = [header.join(","), ...rows].join("\n");
+    downloadFile(`${baseName}.csv`, csv, "text/csv;charset=utf-8;");
   };
 
   return (
@@ -563,16 +636,39 @@ const Dashboard = () => {
               <h2 className="text-lg font-semibold text-[var(--text)]">Transactions</h2>
               <p className="text-sm text-[var(--muted)] mt-1">Search, filter, sort, and edit records.</p>
             </div>
-            <Button
-              disabled={!isAdmin}
-              className="rounded-full"
-              onClick={() => {
-                setEditingId(null);
-                setForm({ date: "", description: "", category: "", type: "expense", amount: "" });
-              }}
-            >
-              {isAdmin ? "Add New Transaction" : "Viewer mode (read-only)"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportTransactions("csv")}
+              >
+                Export CSV
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => exportTransactions("json")}
+              >
+                Export JSON
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setGroupByCategory((prev) => !prev)}
+              >
+                {groupByCategory ? "Hide Grouping" : "Group by Category"}
+              </Button>
+              <Button
+                disabled={!isAdmin}
+                className="rounded-full"
+                onClick={() => {
+                  setEditingId(null);
+                  setForm({ date: "", description: "", category: "", type: "expense", amount: "" });
+                }}
+              >
+                {isAdmin ? "Add New Transaction" : "Viewer mode (read-only)"}
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
@@ -689,6 +785,48 @@ const Dashboard = () => {
               </table>
             )}
           </div>
+
+          {groupByCategory && (
+            <div className="mt-5 rounded-xl border border-[var(--border)] overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[var(--muted)] border-b border-[var(--border)]">
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Transactions</th>
+                    <th className="py-3 px-4">Income</th>
+                    <th className="py-3 px-4">Expense</th>
+                    <th className="py-3 px-4">Net</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupedTransactions.map((row) => {
+                    const net = row.income - row.expense;
+                    return (
+                      <tr key={row.category} className="border-b border-[var(--border)]">
+                        <td className="py-3 px-4">{row.category}</td>
+                        <td className="py-3 px-4">{row.count}</td>
+                        <td className="py-3 px-4 text-[var(--positive)]">
+                          {formatCurrency(row.income)}
+                        </td>
+                        <td className="py-3 px-4 text-[var(--negative)]">
+                          {formatCurrency(row.expense)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={
+                              net >= 0 ? "text-[var(--positive)]" : "text-[var(--negative)]"
+                            }
+                          >
+                            {formatCurrency(net)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </article>
 
         <article className="rounded-2xl bg-[var(--panel)] border border-[var(--border)] p-4 sm:p-5">

@@ -9,9 +9,9 @@ import { cn } from "@/libs/utils";
 const Select = ({
   modal = false,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Root>) => (
-  <SelectPrimitive.Root modal={modal} {...props} />
-);
+}: React.ComponentProps<typeof SelectPrimitive.Root> & { modal?: boolean }) => {
+  return <SelectPrimitive.Root {...({ modal, ...props } as object)} />;
+};
 
 const SelectGroup = SelectPrimitive.Group;
 
