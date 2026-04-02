@@ -494,7 +494,7 @@ const Dashboard = () => {
 
   return (
     <div className="h-full overflow-y-auto scrollbar-hidden pb-4">
-      <section className="rounded-3xl p-6 sm:p-8 border border-[var(--border)] bg-[linear-gradient(120deg,var(--surface)_0%,var(--surface-soft)_100%)] shadow-[0_20px_60px_var(--ring)]">
+      <section className="rounded-3xl p-6 sm:p-8 border border-[var(--border)] bg-[linear-gradient(120deg,var(--surface)_0%,var(--surface-soft)_100%)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">Finance Dashboard</p>
