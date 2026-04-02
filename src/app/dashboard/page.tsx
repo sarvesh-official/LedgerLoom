@@ -59,7 +59,7 @@ type DashboardAction =
   | { type: "ADD_TRANSACTION"; payload: Transaction }
   | { type: "UPDATE_TRANSACTION"; payload: Transaction };
 
-const STORAGE_KEY = "ledgerloom-dashboard-transactions";
+const STORAGE_KEY = "ledgerloom-dashboard-transactions-v2";
 
 const DEFAULT_FILTERS: Filters = {
   search: "",
@@ -273,20 +273,43 @@ const Dashboard = () => {
   useEffect(() => {
     const syncSearchFromUrl = () => {
       const params = new URLSearchParams(window.location.search);
-      const q = params.get("q") ?? "";
-      dispatch({ type: "SET_FILTER", payload: { search: q } });
+      dispatch({
+        type: "SET_FILTER",
+        payload: { search: params.get("q") ?? "" },
+      });
     };
 
     const syncSearchFromEvent = (event: Event) => {
       const customEvent = event as CustomEvent<string>;
-      dispatch({ type: "SET_FILTER", payload: { search: customEvent.detail ?? "" } });
+      dispatch({
+        type: "SET_FILTER",
+        payload: { search: customEvent.detail ?? "" },
+      });
+    };
+
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      window.dispatchEvent(new Event("ledgerloom-location-change"));
+    };
+
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args);
+      window.dispatchEvent(new Event("ledgerloom-location-change"));
     };
 
     syncSearchFromUrl();
     window.addEventListener("popstate", syncSearchFromUrl);
+    window.addEventListener("ledgerloom-location-change", syncSearchFromUrl);
     window.addEventListener("ledgerloom-search", syncSearchFromEvent as EventListener);
+
     return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
       window.removeEventListener("popstate", syncSearchFromUrl);
+      window.removeEventListener("ledgerloom-location-change", syncSearchFromUrl);
       window.removeEventListener("ledgerloom-search", syncSearchFromEvent as EventListener);
     };
   }, []);
