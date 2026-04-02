@@ -14,6 +14,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Role = "viewer" | "admin";
 type TransactionType = "income" | "expense";
@@ -391,16 +400,21 @@ const Dashboard = () => {
           </div>
 
           <div className="flex gap-3 items-center">
-            <label className="text-sm text-[var(--muted)]" htmlFor="role-switcher">Role</label>
-            <select
-              id="role-switcher"
+            <label className="text-sm text-[var(--muted)]">Role</label>
+            <Select
               value={state.role}
-              onChange={(e) => dispatch({ type: "SET_ROLE", payload: e.target.value as Role })}
-              className="bg-[var(--surface)] border border-[var(--border)] rounded-full px-4 py-2 text-sm text-[var(--text)]"
+              onValueChange={(value) =>
+                dispatch({ type: "SET_ROLE", payload: value as Role })
+              }
             >
-              <option value="viewer">Viewer</option>
-              <option value="admin">Admin</option>
-            </select>
+              <SelectTrigger className="w-[150px] rounded-full">
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="viewer">Viewer</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -427,15 +441,16 @@ const Dashboard = () => {
               <h2 className="text-lg font-semibold text-[var(--text)]">Interactive Cashflow Area Chart</h2>
               <p className="text-sm text-[var(--muted)]">Income vs expense for selected range.</p>
             </div>
-            <select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-              className="w-[160px] rounded-lg bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
-            >
-              <option value="90d">Last 90 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="7d">Last 7 days</option>
-            </select>
+            <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+              <SelectTrigger className="w-[160px] rounded-lg">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="90d">Last 90 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="pt-4 h-[280px]">
             {!mounted ? (
@@ -548,64 +563,84 @@ const Dashboard = () => {
               <h2 className="text-lg font-semibold text-[var(--text)]">Transactions</h2>
               <p className="text-sm text-[var(--muted)] mt-1">Search, filter, sort, and edit records.</p>
             </div>
-            <button
+            <Button
               disabled={!isAdmin}
-              className="rounded-full px-4 py-2 text-sm font-medium bg-[var(--brand)] text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-full"
               onClick={() => {
                 setEditingId(null);
                 setForm({ date: "", description: "", category: "", type: "expense", amount: "" });
               }}
             >
               {isAdmin ? "Add New Transaction" : "Viewer mode (read-only)"}
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
-            <input
+            <Input
               value={state.filters.search}
               onChange={(e) => dispatch({ type: "SET_FILTER", payload: { search: e.target.value } })}
               placeholder="Search description/category"
-              className="md:col-span-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+              className="md:col-span-2 rounded-xl"
             />
-            <select
+            <Select
               value={state.filters.type}
-              onChange={(e) => dispatch({ type: "SET_FILTER", payload: { type: e.target.value as Filters["type"] } })}
-              className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+              onValueChange={(value) =>
+                dispatch({ type: "SET_FILTER", payload: { type: value as Filters["type"] } })
+              }
             >
-              <option value="all">All Types</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
-            <select
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="expense">Expense</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={state.filters.category}
-              onChange={(e) => dispatch({ type: "SET_FILTER", payload: { category: e.target.value } })}
-              className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+              onValueChange={(value) =>
+                dispatch({ type: "SET_FILTER", payload: { category: value } })
+              }
             >
-              {allCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category === "all" ? "All Categories" : category}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                {allCategories.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    {category === "all" ? "All Categories" : category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex gap-3 mt-3">
-            <select
+            <Select
               value={state.filters.sort}
-              onChange={(e) => dispatch({ type: "SET_FILTER", payload: { sort: e.target.value as SortOption } })}
-              className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)]"
+              onValueChange={(value) =>
+                dispatch({ type: "SET_FILTER", payload: { sort: value as SortOption } })
+              }
             >
-              <option value="date_desc">Newest Date</option>
-              <option value="date_asc">Oldest Date</option>
-              <option value="amount_desc">Highest Amount</option>
-              <option value="amount_asc">Lowest Amount</option>
-            </select>
-            <button
+              <SelectTrigger className="rounded-xl w-[180px]">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date_desc">Newest Date</SelectItem>
+                <SelectItem value="date_asc">Oldest Date</SelectItem>
+                <SelectItem value="amount_desc">Highest Amount</SelectItem>
+                <SelectItem value="amount_asc">Lowest Amount</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => dispatch({ type: "RESET_FILTERS" })}
-              className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)]"
+              className="rounded-xl"
             >
               Reset Filters
-            </button>
+            </Button>
           </div>
 
           <div className="mt-4 overflow-x-auto">
@@ -637,13 +672,16 @@ const Dashboard = () => {
                         {formatCurrency(tx.amount)}
                       </td>
                       <td className="py-3">
-                        <button
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
                           disabled={!isAdmin}
                           onClick={() => onEdit(tx)}
-                          className="text-xs px-3 py-1 rounded-full border border-[var(--border)] text-[var(--brand)] disabled:opacity-40 disabled:cursor-not-allowed"
+                          className="rounded-full text-[var(--brand)]"
                         >
                           Edit
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -660,41 +698,47 @@ const Dashboard = () => {
           </p>
 
           <form onSubmit={onSubmit} className="space-y-3 mt-4">
-            <input
+            <Input
               type="date"
               value={form.date}
               onChange={(e) => setForm((prev) => ({ ...prev, date: e.target.value }))}
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
+              className="w-full rounded-xl"
             />
-            <input
+            <Input
               type="text"
               value={form.description}
               onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="Description"
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
+              className="w-full rounded-xl"
             />
-            <input
+            <Input
               type="text"
               value={form.category}
               onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
               placeholder="Category"
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
+              className="w-full rounded-xl"
             />
 
             <div className="grid grid-cols-2 gap-3">
-              <select
+              <Select
                 value={form.type}
-                onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value as TransactionType }))}
+                onValueChange={(value) =>
+                  setForm((prev) => ({ ...prev, type: value as TransactionType }))
+                }
                 disabled={!isAdmin}
-                className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
               >
-                <option value="income">Income</option>
-                <option value="expense">Expense</option>
-              </select>
-              <input
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">Income</SelectItem>
+                  <SelectItem value="expense">Expense</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
                 type="number"
                 min="1"
                 step="0.01"
@@ -702,17 +746,17 @@ const Dashboard = () => {
                 onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
                 placeholder="Amount"
                 disabled={!isAdmin}
-                className="rounded-xl bg-[var(--surface)] border border-[var(--border)] px-3 py-2 text-sm text-[var(--text)] disabled:opacity-50"
+                className="rounded-xl"
               />
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={!isAdmin}
-              className="w-full rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-xl"
             >
               {submitLabel}
-            </button>
+            </Button>
           </form>
         </article>
       </section>

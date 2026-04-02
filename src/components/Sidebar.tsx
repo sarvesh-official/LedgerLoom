@@ -18,28 +18,28 @@ const Sidebar = () => {
           />
           <SidebarLink
             link={{
-              href: "/analytics",
+              href: "/dashboard",
               icon: <IconChartBar size={20} />,
               label: "Analytics",
             }}
           />
           <SidebarLink
             link={{
-              href: "/billing",
+              href: "/dashboard",
               icon: <IconCreditCard size={20} />,
               label: "Billing",
             }}
           />
           <SidebarLink
             link={{
-              href: "/jobs",
+              href: "/dashboard",
               icon: <IconBriefcase size={20} />,
               label: "Jobs",
             }}
           />
           <SidebarLink
             link={{
-              href: "/settings",
+              href: "/dashboard",
               icon: <IconSettings size={20} />,
               label: "Settings",
             }}
@@ -49,7 +49,7 @@ const Sidebar = () => {
         {/* Bottom Icon */}
         <SidebarLink
           link={{
-            href: "/logout",
+            href: "/dashboard",
             icon: <IconLogout size={20} />,
             label: "Logout",
           }}
