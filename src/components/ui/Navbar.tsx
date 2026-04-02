@@ -38,7 +38,7 @@ const NavbarContent = () => {
               className="w-8 h-6"
             />
             <h1 className="hidden sm:block text-sm font-semibold">
-              SHARKFINCE
+              LEDGERLOOM
             </h1>
           </div>
         </div>

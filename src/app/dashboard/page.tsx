@@ -49,7 +49,7 @@ type DashboardAction =
   | { type: "ADD_TRANSACTION"; payload: Transaction }
   | { type: "UPDATE_TRANSACTION"; payload: Transaction };
 
-const STORAGE_KEY = "sharkfince-dashboard-transactions";
+const STORAGE_KEY = "ledgerloom-dashboard-transactions";
 
 const INITIAL_TRANSACTIONS: Transaction[] = [
   {
