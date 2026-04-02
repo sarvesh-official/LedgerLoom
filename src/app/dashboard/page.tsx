@@ -494,7 +494,7 @@ const Dashboard = () => {
 
   return (
     <div className="h-full overflow-y-auto scrollbar-hidden pb-4">
-      <section className="rounded-3xl p-6 sm:p-8 border border-[var(--border)] bg-[linear-gradient(120deg,var(--surface)_0%,var(--surface-soft)_100%)]">
+      <section className="rounded-3xl p-6 sm:p-8 border border-[var(--border)] bg-[var(--panel)]">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-[var(--muted)]">Finance Dashboard</p>
@@ -504,22 +504,21 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex gap-3 items-center">
-            <label className="text-sm text-[var(--muted)]">Role</label>
-            <Select
+          <div className="relative z-20 flex gap-3 items-center">
+            <label className="text-sm text-[var(--muted)]" htmlFor="role-select">
+              Role
+            </label>
+            <select
+              id="role-select"
               value={state.role}
-              onValueChange={(value) =>
-                dispatch({ type: "SET_ROLE", payload: value as Role })
+              onChange={(event) =>
+                dispatch({ type: "SET_ROLE", payload: event.target.value as Role })
               }
+              className="w-[150px] rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] cursor-pointer"
             >
-              <SelectTrigger className="w-[150px] rounded-full">
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="viewer">Viewer</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="viewer">Viewer</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
         </div>
 
